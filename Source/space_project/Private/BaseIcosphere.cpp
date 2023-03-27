@@ -4,7 +4,7 @@
 #include "BaseIcosphere.h"
 #include <array>
 #include "KismetProceduralMeshLibrary.h"
-
+#include <iostream>
 
 
 
@@ -37,10 +37,29 @@ ABaseIcosphere::ABaseIcosphere()
     }
 
 
+
+
+
+
     m_triangles_i = TArray<int>((int*)m_triangles.GetData(), 3 * m_triangles.Num());
 
-    FString Mv = FString::Printf(TEXT("length m_vertices of %d"), m_vertices.Num());
-   // GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, Mv);
+    std::cout << m_uvmapping.Num() << std::endl;
+
+    UE_LOG(LogTemp, Warning, TEXT("xxxx %f"), m_uvmapping.Num());
+    for (int i = 0; i < m_uvmapping.Num(); ++i) {
+
+        UE_LOG(LogTemp, Warning, TEXT("xxxxxxx %f"), m_uvmapping[i].X);
+        UE_LOG(LogTemp, Warning, TEXT("yyyyyy %f"), m_uvmapping[i].Y);
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("vvvv %d"), m_vertices.Num());
+    for (int i = 0; i < m_vertices.Num(); ++i) {
+
+        UE_LOG(LogTemp, Warning, TEXT("vvvvxxxxxxxx %f"), m_vertices[i].X);
+        UE_LOG(LogTemp, Warning, TEXT("vvvvyyyyyy %f"), m_vertices[i].Y);
+        UE_LOG(LogTemp, Warning, TEXT("vvvvzzzz %f"), m_vertices[i].Z);
+    }
+
     UE_LOG(LogTemp, Warning, TEXT("hhhhhh"))
     FString Mt = FString::Printf(TEXT("length m_triangles_i of %d"), m_triangles_i.Num());
     //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, Mt);
@@ -84,8 +103,13 @@ void ABaseIcosphere::make_icosphere(uint8 subdivisions)
         each *= 500;
     }
 
+    UE_LOG(LogTemp, Warning, TEXT("222222 %d"), m_vertices.Num());
     mapNormal();
+
+    UE_LOG(LogTemp, Warning, TEXT("111111 %d"), m_vertices.Num());
     mapuv();
+
+    UE_LOG(LogTemp, Warning, TEXT("33333 %d"), m_vertices.Num());
     // FString M = FString::Printf(TEXT("length of %d"), m_triangles.Num());
     //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, M);
 }
@@ -234,44 +258,75 @@ FVector2D FindUV(const FVector& Vertex, const FVector& Normal, FVector2D& uv)
 }
 
 void FindUV(const TArray<FVector>& m_vertices, const FVector& Normal, TArray<Triangle>& m_triangles, TArray<FVector2D>& uv) {
-    uv.Init(FVector2D::ZeroVector, m_vertices.Num() * 2);
+    uv.Init(FVector2D::ZeroVector, m_vertices.Num());
+    UE_LOG(LogTemp, Warning, TEXT("m_vertices %f"), m_vertices.Num());
     for (int i = 0; i < m_vertices.Num(); ++i) {
-        uv[2*i].X = FMath::Atan2(m_vertices[i].X, m_vertices[i].Y) / (2.0 * PI) + 0.5f;
-        uv[2*i].Y = 0.5f + FMath::Asin(m_vertices[i].Z) / PI;
+        uv[i].X = FMath::Atan2(m_vertices[i].Y, m_vertices[i].X) / (2.0 * PI) + 0.5f;
+        UE_LOG(LogTemp, Warning, TEXT("m_vertices uv[i].X  %f"), uv[i].X);
+        uv[i].Y = -1*( 0.5f + FMath::Asin(m_vertices[i].Z) / PI);
+        UE_LOG(LogTemp, Warning, TEXT("m_vertices uv[i].Y %f"), uv[i].Y);
     }
+    //FVector2D UVScale(1, 1);
+    //TArray<int> m_triangles_i = TArray<int>((int*)m_triangles.GetData(), 3 * m_triangles.Num());
+    //for (int i = 0; i < m_triangles_i.Num(); i += 3) {
+    //    int32 a = m_triangles_i[i], b = m_triangles_i[i + 1], c = m_triangles_i[i + 2];
+    //    int32 ay = uv[a].Y, by = uv[b].Y, cy = uv[c].Y;
+    //    int32 ax = uv[a].X, bx = uv[b].X, cx = uv[c].X;
+    //    UE_LOG(LogTemp, Warning, TEXT("bbb xxxxxxx %f"), uv[a].X);
+    //    UE_LOG(LogTemp, Warning, TEXT("bbb yyyyyy %f"), uv[a].Y);
+    //    UE_LOG(LogTemp, Warning, TEXT("bb xxxxxxx %f"), uv[b].X);
+    //    UE_LOG(LogTemp, Warning, TEXT("bb yyyyyy %f"), uv[b].Y);
+    //    UE_LOG(LogTemp, Warning, TEXT("b xxxxxxx %f"), uv[c].X);
+    //    UE_LOG(LogTemp, Warning, TEXT("b yyyyyy %f"), uv[c].Y);
+    //    //if (1) { // uv fixing code; don't ask me how I got here
+    //    //    if (bx - ax >= 0.5 && ay != 1) bx -= 1;
+    //    //    if (cx - bx > 0.5) cx -= 1;
+    //    //    if (ax > 0.5 && ax - cx > 0.5 || ax == 1 && cy == 0) ax -= 1;
+    //    //    if (bx > 0.5 && bx - ax > 0.5) bx -= 1;
+    //    //    if (ay == 0 || ay == 1) ax = (bx + cx) / 2;
+    //    //    if (by == 0 || by == 1) bx = (ax + cx) / 2;
+    //    //    if (cy == 0 || cy == 1) cx = (ax + bx) / 2;
+    //    //}
+    //    //ax = FMath::Fmod(ax, 1.0f);
+    //    //ay = FMath::Fmod(ay, 1.0f);
+    //    //if (ax < 0) ax += 1.0f;
+    //    //if (ay < 0) ay += 1.0f;
+    //    //bx = FMath::Fmod(bx, 1.0f);
+    //    //by = FMath::Fmod(by, 1.0f);
+    //    //if (bx < 0) bx += 1.0f;
+    //    //if (by < 0) by += 1.0f;
+    //    //cx = FMath::Fmod(cx, 1.0f);
+    //    //cy = FMath::Fmod(cy, 1.0f);
+    //    //if (cx < 0) cx += 1.0f;
+    //    //if (cy < 0) cy += 1.0f;
+    //    uv[a].Y = ay;
+    //    uv[b].Y = by;
+    //    uv[c].Y = cy;
+    //    uv[a].X = ax;
+    //    uv[b].X = bx;
+    //    uv[c].X = cx;
+    //    uv[a] *= UVScale;
+    //    uv[b] *= UVScale;
+    //    uv[c] *= UVScale;
+    //    UE_LOG(LogTemp, Warning, TEXT("aaa xxxxxxx %f"), uv[a].X);
+    //    UE_LOG(LogTemp, Warning, TEXT("aaa yyyyyy %f"), uv[a].Y);
+    //    UE_LOG(LogTemp, Warning, TEXT("aa xxxxxxx %f"), uv[b].X);
+    //    UE_LOG(LogTemp, Warning, TEXT("aa yyyyyy %f"), uv[b].Y);
+    //    UE_LOG(LogTemp, Warning, TEXT("a xxxxxxx %f"), uv[c].X);
+    //    UE_LOG(LogTemp, Warning, TEXT("a yyyyyy %f"), uv[c].Y);
 
-    TArray<int> m_triangles_i = TArray<int>((int*)m_triangles.GetData(), 3 * m_triangles.Num());
-    for (int i = 0; i < m_triangles_i.Num(); i += 3) {
-        int32 a = m_triangles_i[i] * 2, b = m_triangles_i[i + 1] * 2, c = m_triangles_i[i + 2] * 2;
-        int32 ay = uv[a + 1].Y, by = uv[b + 1].Y, cy = uv[c + 1].Y;
-        int32 ax = uv[a + 1].X, bx = uv[b + 1].X, cx = uv[c + 1].X;
-        if (1) { // uv fixing code; don't ask me how I got here
-            if (bx - ax >= 0.5 && ay != 1) bx -= 1;
-            if (cx - bx > 0.5) cx -= 1;
-            if (ax > 0.5 && ax - cx > 0.5 || ax == 1 && cy == 0) ax -= 1;
-            if (bx > 0.5 && bx - ax > 0.5) bx -= 1;
-            if (ay == 0 || ay == 1) ax = (bx + cx) / 2;
-            if (by == 0 || by == 1) bx = (ax + cx) / 2;
-            if (cy == 0 || cy == 1) cx = (ax + bx) / 2;
-        }
-        ax = FMath::Fmod(ax, 1.0f);
-        ay = FMath::Fmod(ay, 1.0f);
-        if (ax < 0) ax += 1.0f;
-        if (ay < 0) ay += 1.0f;
-        bx = FMath::Fmod(bx, 1.0f);
-        by = FMath::Fmod(by, 1.0f);
-        if (bx < 0) bx += 1.0f;
-        if (by < 0) by += 1.0f;
-        cx = FMath::Fmod(cx, 1.0f);
-        cy = FMath::Fmod(cy, 1.0f);
-        if (cx < 0) cx += 1.0f;
-        if (cy < 0) cy += 1.0f;
+    //}
+    UE_LOG(LogTemp, Warning, TEXT("hh xxxx %f"), uv.Num());
+    for (int i = 0; i < uv.Num(); ++i) {
+
+        UE_LOG(LogTemp, Warning, TEXT("hhb xxxxxxx %f"), uv[i].X);
+        UE_LOG(LogTemp, Warning, TEXT("hh yyyyyy %f"), uv[i].Y);
     }
-
 }
 
 void ABaseIcosphere::mapuv()
 {
+    UE_LOG(LogTemp, Warning, TEXT("a m_vertices.Num() %f"), m_vertices.Num());
     m_uvmapping.Empty(m_normals.Num());
     //for (int32 i = 0; i < m_normals.Num(); ++i)
     //{
@@ -279,11 +334,14 @@ void ABaseIcosphere::mapuv()
     //    m_uvmapping.Add(FindUV(m_vertices[i], m_normals[i], *(m_uvmapping.GetData() + i)));
     //}
     m_uvmapping.Init(FVector2D::ZeroVector, m_vertices.Num());
+    UE_LOG(LogTemp, Warning, TEXT("a m_vertices.Num() %f"), m_vertices.Num());
     FindUV(m_vertices, FVector(0,0,1), m_triangles, m_uvmapping);
     // FindUV(m_vertices, FVector(0, 0, 1), m_triangles, m_uvmapping);
 }
 
 void ABaseIcosphere::mapNormal() {
+
+    UE_LOG(LogTemp, Warning, TEXT("bbbbbb m_vertices.Num() %f"), m_vertices.Num());
     m_normals.Empty(m_vertices.Num());
     m_triangles_i = TArray<int>((int*)m_triangles.GetData(), 3 * m_triangles.Num());
 
@@ -295,6 +353,9 @@ void ABaseIcosphere::mapNormal() {
             FVector C = m_vertices[m_triangles_i[i + j]];
             FVector A = m_vertices[m_triangles_i[i + (j + 1) % 3]];
             FVector B = m_vertices[m_triangles_i[i + (j + 2) % 3]];
+            UE_LOG(LogTemp, Warning, TEXT("AAAAAAA %f"),A.X);
+            UE_LOG(LogTemp, Warning, TEXT("BBBBBBB %f"), B.X);
+            UE_LOG(LogTemp, Warning, TEXT("CCCCC %f"),C.X);
             FVector TriangleNormal = FVector::CrossProduct(B-C, A-C).GetSafeNormal();
             m_normals[m_triangles_i[i + j]] += TriangleNormal;
         }

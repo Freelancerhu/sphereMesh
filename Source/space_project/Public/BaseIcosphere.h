@@ -109,6 +109,8 @@ public:
     UPROPERTY(Category = "my category", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
     UProceduralMeshComponent* MeshComponent;
 
+    UProceduralMeshComponent* MeshComponent_UV;
+
     UPROPERTY(Category = "my category", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
     USphereComponent* CollisionComponent;
 
