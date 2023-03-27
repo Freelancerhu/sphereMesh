@@ -3,6 +3,7 @@
 
 #include "BaseIcosphere.h"
 #include <array>
+#include "KismetProceduralMeshLibrary.h"
 
 
 
@@ -13,7 +14,6 @@ ABaseIcosphere::ABaseIcosphere()
 {
     // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
-    target_subdivisions = 2;
     make_icosphere(target_subdivisions);
     bCollideWhenPlacing = true;
     //SpawnCollisionHandlingMethod = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -138,13 +138,14 @@ uint32 ABaseIcosphere::vertex_for_edge(uint32 vi1, uint32 vi2)
     return inserted.first->second;
 }
 
+
 void FindUV(const FVector& normal, FVector2D& uv)
 {
     const float& x = normal.X;
-    const float& y = normal.Y;
-    const float& z = normal.Z;
+    const float& y = normal.Z;
+    const float& z = normal.Y;
     float normalisedX = 0;
-    float normalisedZ = -1;
+    float normalisedZ = 1;
     if (((x * x) + (z * z)) > 0)
     {
         normalisedX = sqrt((x * x) / ((x * x) + (z * z)));
@@ -158,6 +159,7 @@ void FindUV(const FVector& normal, FVector2D& uv)
             normalisedZ = -normalisedZ;
         }
     }
+    
     if (normalisedZ == 0)
     {
         uv.X = ((normalisedX * PI) / 2);
@@ -180,27 +182,91 @@ void FindUV(const FVector& normal, FVector2D& uv)
     }
     uv.X /= 2 * PI;
     uv.Y = (-y + 1) / 2;
-    FVector2D UVScale(99, 99);
-    uv *= UVScale;
+    //FVector2D UVScale(1.0/999999, 1.0/999999);
+    //uv *= UVScale;
+    uv.X = FMath::Fmod(uv.X, 1.0f);
+    uv.Y = FMath::Fmod(uv.Y, 1.0f);
+    if (uv.X < 0) uv.X += 1.0f;
+    if (uv.Y < 0) uv.Y += 1.0f;
 }
 
 FVector2D FindUV(const FVector& Vertex, const FVector& Normal, FVector2D& uv)
 {
-    FVector2D UVScale(99,99);
+    FVector2D UVScale(1,1);
     FVector2D UVOffset(0,0);
     // 计算顶点在3D空间中的位置
-    FVector Position = Vertex + Normal;
+    float SphereRadius = 100; // 球体的半径
+    //FVector Position = (Vertex + Normal).GetSafeNormal() * 0.0001;
+    FVector Position = (Vertex) * 1;
+    /*FVector T = FVector(0, 1, 0);
+    if (FMath::Abs(Normal.Z) < 1 - KINDA_SMALL_NUMBER) {
+        T = FVector(Normal.Z, 0, -Normal.X).GetSafeNormal();
+    }
+    FVector U = FVector::CrossProduct(T, Normal).GetSafeNormal();
+    FVector Position = FVector::ZeroVector;
+    Position.X = FVector::DotProduct(Vertex, T);
+    Position.Y = FVector::DotProduct(Vertex, U);
+    Position.Z = FVector::DotProduct(Vertex, Normal);
+*/
+       
+
 
     // 根据位置计算出UV坐标
     FVector2D UV;
-    UV.X = FMath::Atan2(Position.Y, Position.X) / (2.0 * PI) + 0.5;
-    UV.Y = FMath::Asin(Position.Z) / PI + 0.5;
+    UV.X = FMath::Atan2(Position.Z, Position.Y) / (2.0 * PI) + 0.5f;
+    UV.Y = 1.0f + FMath::Asin(Position.X) / PI;
+   /* if (Position.Z < 0) {
+        UV.Y = (PI / 2 - FMath::Asin(Position.Y)) / 2.0f  / PI;
+    }
+    else {
+        UV.Y = (3 * PI / 2 + FMath::Asin(Position.Y)) / 2.0f / PI;
+    }*/
 
     // 应用缩放和偏移
-    UV *= UVScale;
-    UV += UVOffset;
-
+    //UV *= UVScale;
+    //UV += UVOffset;
+    //UV.X = FMath::Fmod(UV.X, 1.0f);
+    //UV.Y = FMath::Fmod(UV.Y, 1.0f);
+    //if (UV.X < 0) UV.X += 1.0f;
+    //if (UV.Y < 0) UV.Y += 1.0f;
     return UV;
+
+}
+
+void FindUV(const TArray<FVector>& m_vertices, const FVector& Normal, TArray<Triangle>& m_triangles, TArray<FVector2D>& uv) {
+    uv.Init(FVector2D::ZeroVector, m_vertices.Num() * 2);
+    for (int i = 0; i < m_vertices.Num(); ++i) {
+        uv[2*i].X = FMath::Atan2(m_vertices[i].X, m_vertices[i].Y) / (2.0 * PI) + 0.5f;
+        uv[2*i].Y = 0.5f + FMath::Asin(m_vertices[i].Z) / PI;
+    }
+
+    TArray<int> m_triangles_i = TArray<int>((int*)m_triangles.GetData(), 3 * m_triangles.Num());
+    for (int i = 0; i < m_triangles_i.Num(); i += 3) {
+        int32 a = m_triangles_i[i] * 2, b = m_triangles_i[i + 1] * 2, c = m_triangles_i[i + 2] * 2;
+        int32 ay = uv[a + 1].Y, by = uv[b + 1].Y, cy = uv[c + 1].Y;
+        int32 ax = uv[a + 1].X, bx = uv[b + 1].X, cx = uv[c + 1].X;
+        if (1) { // uv fixing code; don't ask me how I got here
+            if (bx - ax >= 0.5 && ay != 1) bx -= 1;
+            if (cx - bx > 0.5) cx -= 1;
+            if (ax > 0.5 && ax - cx > 0.5 || ax == 1 && cy == 0) ax -= 1;
+            if (bx > 0.5 && bx - ax > 0.5) bx -= 1;
+            if (ay == 0 || ay == 1) ax = (bx + cx) / 2;
+            if (by == 0 || by == 1) bx = (ax + cx) / 2;
+            if (cy == 0 || cy == 1) cx = (ax + bx) / 2;
+        }
+        ax = FMath::Fmod(ax, 1.0f);
+        ay = FMath::Fmod(ay, 1.0f);
+        if (ax < 0) ax += 1.0f;
+        if (ay < 0) ay += 1.0f;
+        bx = FMath::Fmod(bx, 1.0f);
+        by = FMath::Fmod(by, 1.0f);
+        if (bx < 0) bx += 1.0f;
+        if (by < 0) by += 1.0f;
+        cx = FMath::Fmod(cx, 1.0f);
+        cy = FMath::Fmod(cy, 1.0f);
+        if (cx < 0) cx += 1.0f;
+        if (cy < 0) cy += 1.0f;
+    }
 
 }
 
@@ -209,9 +275,12 @@ void ABaseIcosphere::mapuv()
     m_uvmapping.Empty(m_normals.Num());
     //for (int32 i = 0; i < m_normals.Num(); ++i)
     //{
-    //    FindUV(m_normals[i], *(m_uvmapping.GetData() + i));
-    //    //m_uvmapping.Add(FindUV(m_vertices[i], m_normals[i], *(m_uvmapping.GetData() + i)));
+    //    // FindUV(m_vertices[i], *(m_uvmapping.GetData() + i));
+    //    m_uvmapping.Add(FindUV(m_vertices[i], m_normals[i], *(m_uvmapping.GetData() + i)));
     //}
+    m_uvmapping.Init(FVector2D::ZeroVector, m_vertices.Num());
+    FindUV(m_vertices, FVector(0,0,1), m_triangles, m_uvmapping);
+    // FindUV(m_vertices, FVector(0, 0, 1), m_triangles, m_uvmapping);
 }
 
 void ABaseIcosphere::mapNormal() {
@@ -226,11 +295,10 @@ void ABaseIcosphere::mapNormal() {
             FVector C = m_vertices[m_triangles_i[i + j]];
             FVector A = m_vertices[m_triangles_i[i + (j + 1) % 3]];
             FVector B = m_vertices[m_triangles_i[i + (j + 2) % 3]];
-            FVector TriangleNormal = FVector::CrossProduct(C - A, C - B).GetSafeNormal();
+            FVector TriangleNormal = FVector::CrossProduct(B-C, A-C).GetSafeNormal();
             m_normals[m_triangles_i[i + j]] += TriangleNormal;
         }
     }
-
     for (int32 i = 0; i < m_normals.Num(); i++)
     {
         m_normals[i].Normalize();

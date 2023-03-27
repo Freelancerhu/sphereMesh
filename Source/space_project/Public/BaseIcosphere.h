@@ -99,11 +99,13 @@ private:
     TArray<FProcMeshTangent> dummy_tangents;
 
 
-    uint8 target_subdivisions;
     uint32 m_radius;
 	umap<std::pair<uint32, uint32>, uint32> lookup; //We keep this empty except while running
 
 public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "my category", meta = (ClampMin = "0", ClampMax = "6", UIMin = "0", UIMax = "6", RangeMin="0", RangeMax="6"))
+    uint8 target_subdivisions;
+
     UPROPERTY(Category = "my category", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
     UProceduralMeshComponent* MeshComponent;
 
@@ -140,6 +142,18 @@ protected:
             {
                 GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("tMeshComponent"));
                 tMeshComponent->SetMaterial(0, MyMaterial);
+            }
+        }
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(ABaseIcosphere, target_subdivisions))
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("target_subdivisions"));
+            // Material属性已更改
+            UProceduralMeshComponent* tMeshComponent = MeshComponent;
+            if (tMeshComponent != nullptr)
+            {
+                make_icosphere(target_subdivisions);
+                MeshComponent->ClearMeshSection(0);
+                MeshComponent->CreateMeshSection(0, m_vertices, m_triangles_i, m_normals, m_uvmapping, dummy_color, dummy_tangents, true);
             }
         }
     }
